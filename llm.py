@@ -1,13 +1,27 @@
 import os
 import time
+import streamlit as st
 from dotenv import load_dotenv
 from groq import Groq
 
 load_dotenv()
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
+
+def _get_key():
+    key = os.getenv("GROQ_API_KEY")          # local: from .env
+    if key:
+        return key
+    try:
+        return st.secrets["GROQ_API_KEY"]    # online: from Streamlit Secrets
+    except Exception:
+        return None
+
+
+client = Groq(api_key=_get_key())
 
 MODEL = "openai/gpt-oss-20b"
 MAX_RETRIES = 5
+
 
 def ask_llm(prompt: str) -> str:
     for attempt in range(MAX_RETRIES):
@@ -21,6 +35,6 @@ def ask_llm(prompt: str) -> str:
             msg = str(e)
             temporary = any(code in msg for code in ["429", "502", "503", "rate_limit"])
             if temporary and attempt < MAX_RETRIES - 1:
-                time.sleep(2 ** attempt * 3)   # 3s, 6s, 12s, 24s
+                time.sleep(2 ** attempt * 3)
                 continue
             raise
